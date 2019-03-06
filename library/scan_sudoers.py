@@ -54,17 +54,27 @@ def main():
     def get_config_lines(path):
         # Read sudoers file
         all_lines = open(path, 'r')
-        # Initialize empty dict
+        # Initialize empty return dict
         sudoer_file = dict()
+        # Initialize aliases vars
+        sudoer_aliases = dict()
+        user_aliases = list()
+        runas_aliases = list()
+        host_aliases = list()
+        command_aliases = list()
         # Raw config lines output
         config_lines = list()
         # Regex for Parsers
         comment_re = re.compile(r'^#+')
         defaults_re = re.compile(r'^(Defaults)+(\s)+(.*$)')
+        cmnd_alias_re = re.compile(r'^(Cmnd_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
+        host_alias_re = re.compile(r'^(Host_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
+        runas_alias_re = re.compile(r'^(Runas_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
+        user_alias_re = re.compile(r'^(User_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
         # Defaults Parsing vars
         config_defaults = list()
         env_keep_opts = list()
-        
+
         # Work on each line of sudoers file
         for l in all_lines:
             # All raw (non-comment) config lines out
@@ -89,22 +99,61 @@ def main():
                 # single defaults option case
                 else:
                     config_defaults.append(defaults_config_line)
-            # TODO Aliases:
-            # Parser for User
+            # Aliases:
+            # Parser for Command Alias
+            if cmnd_alias_re.search(line):
+                command_name = cmnd_alias_re.search(line).group(4)
+                commands = list()
+                for i in cmnd_alias_re.search(line).group(5).split(','):
+                    # Append a space free item to the list
+                    commands.append(i.replace(' ', ''))
+                # Build command alias dict
+                cmnd_alias_formatted = {'name': command_name, 'commands': commands}
+                command_aliases.append(cmnd_alias_formatted)
 
-            # Parser for RunAs
+            # Parser for Host Alias
+            if host_alias_re.search(line):
+                host_name = host_alias_re.search(line).group(4)
+                hosts = list()
+                for i in host_alias_re.search(line).group(5).split(','):
+                    # Append a space free item to the list
+                    hosts.append(i.replace(' ', ''))
+                # Build command alias dict
+                host_alias_formatted = {'name': host_name, 'hosts': hosts}
+                host_aliases.append(host_alias_formatted)
 
-            # Parser for Host
+            # Parser for RunAs Alias
+            if runas_alias_re.search(line):
+                runas_name = runas_alias_re.search(line).group(4)
+                ra_users = list()
+                for i in runas_alias_re.search(line).group(5).split(','):
+                    # Append a space free item to the list
+                    ra_users.append(i.replace(' ', ''))
+                # Build command alias dict
+                runas_alias_formatted = {'name': runas_name, 'users': ra_users}
+                runas_aliases.append(runas_alias_formatted)
 
-            # Parser for Command
+            # Parser for User Alias
+            if user_alias_re.search(line):
+                users_name = user_alias_re.search(line).group(4)
+                ua_users = list()
+                for i in user_alias_re.search(line).group(5).split(','):
+                    # Append a space free item to the list
+                    ua_users.append(i.replace(' ', ''))
+                # Build command alias dict
+                user_alias_formatted = {'name': users_name, 'users': ua_users}
+                user_aliases.append(user_alias_formatted)
 
             # WIP...
         # Build the sudoer file's dict output
         sudoer_file['path'] = path
         sudoer_file['configuration'] = config_lines
-        # Build env_keep dict and append to the rest of the config_defaults list
+        # Build defaults env_keep dict and append to the rest of the config_defaults list
         config_defaults.append({'env_keep': env_keep_opts})
         sudoer_file['defaults'] = config_defaults
+        # Build aliases output dictionary
+        sudoer_aliases = {'user_alias': user_aliases, 'runas_alias': runas_aliases, 'cmnd_alias': command_aliases, 'host_alias': host_aliases}
+        sudoer_file['aliases'] = sudoer_aliases
 
         # done working on the file
         all_lines.close()
