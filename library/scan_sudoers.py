@@ -160,6 +160,7 @@ def main():
         return sudoer_file
 
     def get_sudoers_configs(path):
+        include_dir = ""
         # Get include dir from default sudoers
         sudoers_file = open(path, 'r')
         include_re = re.compile(r'(^#includedir)(\s)+(.*$)')
@@ -175,7 +176,7 @@ def main():
         # Capture default sudoers file
         sudoers['sudoers_files'].append(get_config_lines(path))
         # Get list of all included sudoers files
-        sudoers['included_files'] = [ join(include_dir, filename) for filename in os.listdir(include_dir) if isfile(join(include_dir, filename))]
+        sudoers['included_files'] = [join(include_dir, filename) for filename in os.listdir(include_dir) if isfile(join(include_dir, filename))]
         # Capture each included sudoer file
         for file in sudoers['included_files']:
             sudoers['sudoers_files'].append(get_config_lines(file))
