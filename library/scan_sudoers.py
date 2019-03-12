@@ -162,7 +162,7 @@ def main():
                 for i in host_alias_re.search(line).group(5).split(','):
                     # Append a space free item to the list
                     hosts.append(i.replace(' ', ''))
-                # Buildsudoers = dict() command alias dict
+                # Build command alias dict
                 host_alias_formatted = {'name': host_name, 'hosts': hosts}
                 host_aliases.append(host_alias_formatted)
 
