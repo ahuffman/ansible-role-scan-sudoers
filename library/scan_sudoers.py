@@ -51,6 +51,36 @@ def main():
         supports_check_mode=True
     )
 
+    def get_options(path):
+        ## Get includes
+        sudoers_file = open(path, 'r')
+        options = dict()
+        options['included_files'] = list()
+        include_dir = ""
+
+        # Regex for "#includedir" and "#include" sudoers options
+        includedir_re = re.compile(r'(^#includedir)+\s+(.*$)')
+        include_re = re.compile(r'(^#include)+\s+(.*$)')
+
+        for l in sudoers_file:
+            line = l.replace('\n', '').replace('\t', '    ')
+            # Search for '#includedir'
+            if includedir_re.search(line):
+                include_dir = includedir_re.search(line).group(2)
+            # Search for '#include'
+            if include_re.search(line):
+                options['included_files'].append(include_re.search(line).group(2))
+        sudoers_file.close()
+
+        if include_dir:
+            # build multi-file output
+            options['include_dir'] = include_dir
+            # Get list of all included sudoers files
+            options['included_files'] += [join(include_dir, filename) for filename in os.listdir(include_dir) if isfile(join(include_dir, filename))]
+        else:
+            options['include_dir'] = include_dir
+        return options
+
     def get_config_lines(path):
         # Read sudoers file
         all_lines = open(path, 'r')
@@ -66,7 +96,8 @@ def main():
         config_lines = list()
         # Regex for Parsers
         comment_re = re.compile(r'^#+')
-        defaults_re = re.compile(r'^(Defaults)+(\s)+(.*$)')
+        include_re = re.compile(r'^#include')
+        defaults_re = re.compile(r'^(Defaults)+\s+(.*$)')
         cmnd_alias_re = re.compile(r'^(Cmnd_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
         host_alias_re = re.compile(r'^(Host_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
         runas_alias_re = re.compile(r'^(Runas_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
@@ -75,16 +106,29 @@ def main():
         config_defaults = list()
         env_keep_opts = list()
 
+        # Get options from file
+        options = get_options(path)
+        if options['included_files']:
+            sudoer_file['included_files'] = options['included_files']
+        else:
+            sudoer_file['included_files'] = list()
+        if options['include_dir']:
+            sudoer_file['include_dir'] = options['include_dir']
+        else:
+            sudoer_file['include_dir'] = ""
+
         # Work on each line of sudoers file
         for l in all_lines:
             # All raw (non-comment) config lines out
             line = l.replace('\n', '').replace('\t', '    ') #cleaning up chars we don't want
             if comment_re.search(line) is None and line != '' and line != None:
                 config_lines.append(line)
+            if include_re.search(line):
+                config_lines.append(line)
 
             # Parser for defaults
             if defaults_re.search(line):
-                defaults_config_line = defaults_re.search(line).group(3)
+                defaults_config_line = defaults_re.search(line).group(2)
                 defaults_env_keep_re = re.compile(r'^(env_keep)+((\s\=)|(\s\+\=))+(\s)+(.*$)')
                 defaults_sec_path_re = re.compile(r'^(secure_path)+(\s)+(\=)+(\s)+(.*$)')
                 # Break up multi-line defaults config lines into single config options
@@ -118,7 +162,7 @@ def main():
                 for i in host_alias_re.search(line).group(5).split(','):
                     # Append a space free item to the list
                     hosts.append(i.replace(' ', ''))
-                # Build command alias dict
+                # Buildsudoers = dict() command alias dict
                 host_alias_formatted = {'name': host_name, 'hosts': hosts}
                 host_aliases.append(host_alias_formatted)
 
@@ -160,32 +204,30 @@ def main():
         return sudoer_file
 
     def get_sudoers_configs(path):
-        include_dir = ""
-        # Get include dir from default sudoers
-        sudoers_file = open(path, 'r')
-        include_re = re.compile(r'(^#includedir)(\s)+(.*$)')
-        for l in sudoers_file:
-            line = l.replace('\n', '').replace('\t', '    ')
-            if include_re.search(line):
-                include_dir = include_re.search(line).group(3)
-        sudoers_file.close()
-        # build multi-file output
         sudoers = dict()
-        sudoers['include_dir'] = include_dir
+        included_files = list()
+
+        # Get parsed values from default sudoers file
         sudoers['sudoers_files'] = list()
-        # Capture default sudoers file
-        sudoers['sudoers_files'].append(get_config_lines(path))
-        # Get list of all included sudoers files
-        sudoers['included_files'] = [join(include_dir, filename) for filename in os.listdir(include_dir) if isfile(join(include_dir, filename))]
+        default = get_config_lines(path)
+        if default:
+            sudoers['sudoers_files'].append(default)
+        if default['included_files']:
+            included_files += default['included_files']
+
         # Capture each included sudoer file
-        for file in sudoers['included_files']:
-            sudoers['sudoers_files'].append(get_config_lines(file))
+        for file in included_files:
+            included_file = get_config_lines(file)
+            if included_file:
+                sudoers['sudoers_files'].append(included_file)
+            # append even more included files as we parse deeper
+            if included_file['included_files']:
+                included_files += included_file['included_files']
         return sudoers
 
     default_sudoers = '/etc/sudoers'
     sudoers = get_sudoers_configs(default_sudoers)
-    output = {'sudoers': sudoers}
-    result = {'ansible_facts': output}
+    result = {'ansible_facts': {'sudoers': sudoers}}
 
     module.exit_json(**result)
 
