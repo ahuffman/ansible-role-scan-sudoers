@@ -82,33 +82,80 @@ def main():
         return options
 
     def get_user_specs(line, path):
-        #TODO: Parse for user specs
-        #WIP
-        #
         user_spec = dict()
-        user_spec_re = re.compile(r'(^\S+)\s+(\S+)\s*={1}\s*(\S+)\s+(\S+:|.*$)\s*(.*$)')
+        user_spec_re =  re.compile(r'(^\S+,{1}\s*\S+|^\S+)\s*(\S+,{1}\s*|\S+){1}\s*={1}\s*((\S+,{1}\s*)+\S+|\S+){1}\s*(\S+:{1})*\s*(.*$)')
+        default_override_re = re.compile(r'(Defaults){1}([@:!>]){1}((\s*\S+,{1})+\s*\S+|\S+)\s*(.*$)')
         spec_fields = user_spec_re.search(line)
         if user_spec_re.search(line):
             user_spec['tags'] = list()
             user_spec['commands'] = list()
+            user_spec['users'] = list()
+            user_spec['operators'] = list()
+            user_spec['hosts'] = list()
+            # users
+            users = spec_fields.group(1).split(',')
+            for user in users:
+                if user != '' and user != None:
+                    user_spec['users'].append(user.lstrip())
+            # hosts
+            hosts = spec_fields.group(2).split(',')
+            for host in hosts:
+                if host != '' and host != None:
+                    user_spec['hosts'].append(host.lstrip())
+            # operators
+            operators = spec_fields.group(3).split(',')
+            for op in operators:
+                if op != '' and op != None:
+                    user_spec['operators'].append(op.lstrip().replace('(', '').replace(')', ''))
+            # tags - optional
             if spec_fields.group(5):
-                # means we have tags
-                tags = spec_fields.group(4).split(':')
+                tags = spec_fields.group(5).split(':')
                 for tag in tags:
                     if tag != '' and tag != None:
                         user_spec['tags'].append(tag)
-                commands = spec_fields.group(5).split(',')
-                for command in commands:
-                    if command != '' and command != None:
-                        user_spec['commands'].append(command.lstrip())
-            else:
-                user_spec['commands'].append(spec_fields.group(4))
+            # commands
+            commands = spec_fields.group(6).split(',')
+            for command in commands:
+                if command != '' and command != None:
+                    user_spec['commands'].append(command.lstrip())
             #user_spec['name'] = spec_fields.group(1)
-            user_spec['users'] = spec_fields.group(1)
-            user_spec['hosts'] = spec_fields.group(2)
-            user_spec['operators'] = spec_fields.group(3)
         else:
-            user_spec['unknown_data'] = line
+            if default_override_re.search(line):
+                default_override = default_override_re.search(line)
+                # type
+                if default_override.group(2) == '@':
+                    user_spec['type'] = 'host'
+                    user_spec['hosts'] = list()
+                    hosts = default_override.group(3).split(',')
+                    for host in hosts:
+                        if host != '' and host != None:
+                            user_spec['hosts'].append(host.lstrip())
+                elif default_override.group(2) == ':':
+                    user_spec['type'] = 'user'
+                    user_spec['users'] = list()
+                    users = default_override.group(3).split(',')
+                    for user in users:
+                        if user != '' and user != None:
+                            user_spec['users'].append(user.lstrip())
+                elif default_override.group(2) == '!':
+                    user_spec['type'] = 'command'
+                    user_spec['commands'] = list()
+                    commands = default_override.group(3).split(',')
+                    for command in commands:
+                        if command != '' and command != None:
+                            user_spec['commands'].append(command.lstrip())
+                elif default_override.group(2) == '>':
+                    user_spec['type'] = 'runas'
+                    user_spec['operators'] = list()
+                    operators = default_override.group(3).split(',')
+                    for op in operators:
+                        if op != '' and op != None:
+                            user_spec['operators'].append(op.lstrip())
+                user_spec['defaults'] = list()
+                defaults = default_override.group(5).split(',')
+                for default in defaults:
+                    if default != '' and default != None:
+                        user_spec['defaults'].append(default.lstrip())
         return user_spec
 
     def get_config_lines(path):
