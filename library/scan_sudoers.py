@@ -81,6 +81,32 @@ def main():
             options['include_dir'] = include_dir
         return options
 
+    def get_user_specs(line, path):
+        #TODO: Parse for user specs
+        #WIP
+        #
+        user_spec = dict()
+        user_spec_re = re.compile(r'(^\S+)\s+(\S+)\s*={1}\s*(\S+)\s+(\S+:|.*$)\s*(.*$)')
+        spec_fields = user_spec_re.search(line)
+        if user_spec_re.search(line):
+            user_spec['tags'] = list()
+            user_spec['commands'] = list()
+            if spec_fields.group(5):
+                # means we have tags
+                tags = spec_fields.group(4).split(':')
+                for tag in tags:
+                    user_spec['tags'].append(tag)
+                commands = spec_fields.group(5).split(',')
+                for command in commands:
+                    user_spec['commands'].append(command.lstrip())
+            else:
+                user_spec['commands'] = spec_fields.group(4)
+            #user_spec['name'] = spec_fields.group(1)
+            user_spec['users'] = spec_fields.group(1)
+            user_spec['hosts'] = spec_fields.group(2)
+            user_spec['operators'] = spec_fields.group(3)
+        return user_spec
+
     def get_config_lines(path):
         # Read sudoers file
         all_lines = open(path, 'r')
@@ -92,8 +118,10 @@ def main():
         runas_aliases = list()
         host_aliases = list()
         command_aliases = list()
+        user_specifications = list()
         # Raw config lines output
         config_lines = list()
+
         # Regex for Parsers
         comment_re = re.compile(r'^#+')
         include_re = re.compile(r'^#include')
@@ -102,6 +130,7 @@ def main():
         host_alias_re = re.compile(r'^(Host_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
         runas_alias_re = re.compile(r'^(Runas_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
         user_alias_re = re.compile(r'^(User_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
+
         # Defaults Parsing vars
         config_defaults = list()
         env_keep_opts = list()
@@ -188,6 +217,10 @@ def main():
                 user_alias_formatted = {'name': users_name, 'users': ua_users}
                 user_aliases.append(user_alias_formatted)
 
+            # Parser for user_specs
+            if not user_alias_re.search(line) and not runas_alias_re.search(line) and not host_alias_re.search(line) and not cmnd_alias_re.search(line) and not include_re.search(line) and not comment_re.search(line) and not defaults_re.search(line):
+                user_spec = get_user_specs(line, path)
+                user_specifications.append(user_spec)
             # WIP...
         # Build the sudoer file's dict output
         sudoer_file['path'] = path
@@ -198,7 +231,7 @@ def main():
         # Build aliases output dictionary
         sudoer_aliases = {'user_alias': user_aliases, 'runas_alias': runas_aliases, 'cmnd_alias': command_aliases, 'host_alias': host_aliases}
         sudoer_file['aliases'] = sudoer_aliases
-
+        sudoer_file['user_specifications'] = user_specifications
         # done working on the file
         all_lines.close()
         return sudoer_file
