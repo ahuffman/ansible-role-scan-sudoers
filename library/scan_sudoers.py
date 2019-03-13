@@ -95,16 +95,20 @@ def main():
                 # means we have tags
                 tags = spec_fields.group(4).split(':')
                 for tag in tags:
-                    user_spec['tags'].append(tag)
+                    if tag != '' and tag != None:
+                        user_spec['tags'].append(tag)
                 commands = spec_fields.group(5).split(',')
                 for command in commands:
-                    user_spec['commands'].append(command.lstrip())
+                    if command != '' and command != None:
+                        user_spec['commands'].append(command.lstrip())
             else:
-                user_spec['commands'] = spec_fields.group(4)
+                user_spec['commands'].append(spec_fields.group(4))
             #user_spec['name'] = spec_fields.group(1)
             user_spec['users'] = spec_fields.group(1)
             user_spec['hosts'] = spec_fields.group(2)
             user_spec['operators'] = spec_fields.group(3)
+        else:
+            user_spec['unknown_data'] = line
         return user_spec
 
     def get_config_lines(path):
@@ -218,7 +222,7 @@ def main():
                 user_aliases.append(user_alias_formatted)
 
             # Parser for user_specs
-            if not user_alias_re.search(line) and not runas_alias_re.search(line) and not host_alias_re.search(line) and not cmnd_alias_re.search(line) and not include_re.search(line) and not comment_re.search(line) and not defaults_re.search(line):
+            if not user_alias_re.search(line) and not runas_alias_re.search(line) and not host_alias_re.search(line) and not cmnd_alias_re.search(line) and not include_re.search(line) and not comment_re.search(line) and not defaults_re.search(line) and line != '' and line != None:
                 user_spec = get_user_specs(line, path)
                 user_specifications.append(user_spec)
             # WIP...
