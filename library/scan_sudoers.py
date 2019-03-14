@@ -267,10 +267,10 @@ def main():
         comment_re = re.compile(r'^#+')
         include_re = re.compile(r'^#include')
         defaults_re = re.compile(r'^(Defaults)+\s+(.*$)')
-        cmnd_alias_re = re.compile(r'^(Cmnd_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
-        host_alias_re = re.compile(r'^(Host_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
-        runas_alias_re = re.compile(r'^(Runas_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
-        user_alias_re = re.compile(r'^(User_Alias)+\s+(((.*)\s\=)+\s+(.*$))')
+        cmnd_alias_re = re.compile(r'(^Cmnd_Alias)+\s+(\S+)+\s*\={1}\s*((\S+,{1}\s*)+\S+|\S+)\s*(\:)*(.*)*$')
+        host_alias_re = re.compile(r'(^Host_Alias)+\s+(\S+)+\s*\={1}\s*((\S+,{1}\s*)+\S+|\S+)\s*(\:)*(.*)*$')
+        runas_alias_re = re.compile(r'(^Runas_Alias)+\s+(\S+)+\s*\={1}\s*((\S+,{1}\s*)+\S+|\S+)\s*(\:)*(.*)*$')
+        user_alias_re = re.compile(r'(^User_Alias)+\s+(\S+)+\s*\={1}\s*((\S+,{1}\s*)+\S+|\S+)\s*(\:)*(.*)*$')
 
         # Defaults Parsing vars
         config_defaults = list()
@@ -321,47 +321,107 @@ def main():
                 # Aliases:
                 # Parser for Command Alias
                 if cmnd_alias_re.search(line):
-                    command_name = cmnd_alias_re.search(line).group(4)
-                    commands = list()
-                    for i in cmnd_alias_re.search(line).group(5).split(','):
-                        # Append a space free item to the list
-                        commands.append(i.replace(' ', ''))
-                    # Build command alias dict
-                    cmnd_alias_formatted = {'name': command_name, 'commands': commands}
-                    command_aliases.append(cmnd_alias_formatted)
+                    if cmnd_alias_re.search(line).group(5) == ':':
+                        # We have a multi line alias
+                        cmnd_multi_line_aliases = line.split(':')
+                        # Process each alias
+                        ca_multi_re = re.compile(r'(^Cmnd_Alias)*\s*(\S+)+\s*\={1}\s*((\S+,{1}\s*)+\S+|\S+).*$')
+                        for ca in cmnd_multi_line_aliases:
+                            ca_fields = ca_multi_re.search(ca)
+                            cmnds_name = ca_fields.group(2)
+                            ca_cmnds = list()
+                            ca_cmnds_split = ca_fields.group(3).split(',')
+                            for cmnd in ca_cmnds_split:
+                                ca_cmnds.append(cmnd.lstrip())
+                            cmnd_alias_formatted = {'name': cmnds_name, 'commands': ca_cmnds}
+                            command_aliases.append(cmnd_alias_formatted)
+                    else:
+                        command_name = cmnd_alias_re.search(line).group(2)
+                        commands = list()
+                        for i in cmnd_alias_re.search(line).group(3).split(','):
+                            # Append a space free item to the list
+                            commands.append(i.replace(' ', ''))
+                        # Build command alias dict
+                        cmnd_alias_formatted = {'name': command_name, 'commands': commands}
+                        command_aliases.append(cmnd_alias_formatted)
 
                 # Parser for Host Alias
                 if host_alias_re.search(line):
-                    host_name = host_alias_re.search(line).group(4)
-                    hosts = list()
-                    for i in host_alias_re.search(line).group(5).split(','):
-                        # Append a space free item to the list
-                        hosts.append(i.replace(' ', ''))
-                    # Build command alias dict
-                    host_alias_formatted = {'name': host_name, 'hosts': hosts}
-                    host_aliases.append(host_alias_formatted)
+                    if host_alias_re.search(line).group(5) == ':':
+                        # We have a multi line alias
+                        host_multi_line_aliases = line.split(':')
+                        # Process each alias
+                        ha_multi_re = re.compile(r'(^Host_Alias)*\s*(\S+)+\s*\={1}\s*((\S+,{1}\s*)+\S+|\S+).*$')
+                        for ha in host_multi_line_aliases:
+                            ha_fields = ha_multi_re.search(ha)
+                            hosts_name = ha_fields.group(2)
+                            ha_hosts = list()
+                            ha_hosts_split = ha_fields.group(3).split(',')
+                            for host in ha_hosts_split:
+                                ha_hosts.append(host.lstrip())
+                            host_alias_formatted = {'name': hosts_name, 'hosts': ha_hosts}
+                            host_aliases.append(host_alias_formatted)
+                    else:
+                        host_name = host_alias_re.search(line).group(2)
+                        hosts = list()
+                        for i in host_alias_re.search(line).group(3).split(','):
+                            # Append a space free item to the list
+                            hosts.append(i.replace(' ', ''))
+                        # Build command alias dict
+                        host_alias_formatted = {'name': host_name, 'hosts': hosts}
+                        host_aliases.append(host_alias_formatted)
 
                 # Parser for RunAs Alias
                 if runas_alias_re.search(line):
-                    runas_name = runas_alias_re.search(line).group(4)
-                    ra_users = list()
-                    for i in runas_alias_re.search(line).group(5).split(','):
-                        # Append a space free item to the list
-                        ra_users.append(i.replace(' ', ''))
-                    # Build command alias dict
-                    runas_alias_formatted = {'name': runas_name, 'users': ra_users}
-                    runas_aliases.append(runas_alias_formatted)
+                    if runas_alias_re.search(line).group(5) == ':':
+                        # We have a multi line alias
+                        runas_multi_line_aliases = line.split(':')
+                        # Process each alias
+                        ra_multi_re = re.compile(r'(^Runas_Alias)*\s*(\S+)+\s*\={1}\s*((\S+,{1}\s*)+\S+|\S+).*$')
+                        for ra in user_multi_line_aliases:
+                            ra_fields = ra_multi_re.search(ra)
+                            runas_name = ra_fields.group(2)
+                            ra_users = list()
+                            ra_users_split = ra_fields.group(3).split(',')
+                            for user in ra_users_split:
+                                ra_users.append(user.lstrip())
+                            runas_alias_formatted = {'name': runas_name, 'users': ra_users}
+                            runas_aliases.append(runas_alias_formatted)
+                    else:
+                        runas_name = runas_alias_re.search(line).group(2)
+                        ra_users = list()
+                        for i in runas_alias_re.search(line).group(3).split(','):
+                            # Append a space free item to the list
+                            ra_users.append(i.replace(' ', ''))
+                        # Build command alias dict
+                        runas_alias_formatted = {'name': runas_name, 'users': ra_users}
+                        runas_aliases.append(runas_alias_formatted)
 
                 # Parser for User Alias
                 if user_alias_re.search(line):
-                    users_name = user_alias_re.search(line).group(4)
-                    ua_users = list()
-                    for i in user_alias_re.search(line).group(5).split(','):
-                        # Append a space free item to the list
-                        ua_users.append(i.replace(' ', ''))
-                    # Build command alias dict
-                    user_alias_formatted = {'name': users_name, 'users': ua_users}
-                    user_aliases.append(user_alias_formatted)
+                    if user_alias_re.search(line).group(5) == ':':
+                        # We have a multi line alias
+                        user_multi_line_aliases = line.split(':')
+                        # Process each alias
+                        ua_multi_re = re.compile(r'(^User_Alias)*\s*(\S+)+\s*\={1}\s*((\S+,{1}\s*)+\S+|\S+).*$')
+                        for ua in user_multi_line_aliases:
+                            ua_fields = ua_multi_re.search(ua)
+                            users_name = ua_fields.group(2)
+                            ua_users = list()
+                            ua_users_split = ua_fields.group(3).split(',')
+                            for user in ua_users_split:
+                                ua_users.append(user.lstrip())
+                            user_alias_formatted = {'name': users_name, 'users': ua_users}
+                            user_aliases.append(user_alias_formatted)
+                    else:
+                        users_name = user_alias_re.search(line).group(2)
+                        ua_users = list()
+                        for i in user_alias_re.search(line).group(3).split(','):
+                            # Append a space free item to the list
+                            ua_users.append(i.lstrip())
+                        # Build command alias dict
+                        user_alias_formatted = {'name': users_name, 'users': ua_users}
+                        user_aliases.append(user_alias_formatted)
 
                 # Parser for user_specs
                 if not user_alias_re.search(line) and not runas_alias_re.search(line) and \
