@@ -360,7 +360,11 @@ def main():
             # append even more included files as we parse deeper
             if included_file['included_files']:
                 included_files += included_file['included_files']
+        # return back everything that was included off of the default sudoers file
+        included_files.append(default_sudoers)
+        sudoers['all_parsed_files'] = included_files
         return sudoers
+
 
     default_sudoers = '/etc/sudoers'
     sudoers = get_sudoers_configs(default_sudoers)
