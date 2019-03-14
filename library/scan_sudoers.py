@@ -172,7 +172,7 @@ def main():
 
     def get_user_specs(line, path):
         user_spec = dict()
-        user_spec_re =  re.compile(r'(^\S+,{1}\s*\S+|^\S+)\s*(\S+,{1}\s*|\S+){1}\s*={1}\s*((\S+,{1}\s*)+\S+|\S+){1}\s*(\S+:{1})*\s*(.*$)')
+        user_spec_re =  re.compile(r'(^\S+,{1}\s*\S+|^\S+)\s*(\S+,{1}\s*|\S+){1}\s*={1}\s*(\({1}(.*)\){1})*\s*(\S+:{1})*\s*(.*$)')
         default_override_re = re.compile(r'(Defaults){1}([@:!>]){1}((\s*\S+,{1})+\s*\S+|\S+)\s*(.*$)')
         spec_fields = user_spec_re.search(line)
         if user_spec_re.search(line):
@@ -191,11 +191,12 @@ def main():
             for host in hosts:
                 if host != '' and host != None:
                     user_spec['hosts'].append(host.lstrip())
-            # operators
-            operators = spec_fields.group(3).split(',')
-            for op in operators:
-                if op != '' and op != None:
-                    user_spec['operators'].append(op.lstrip().replace('(', '').replace(')', ''))
+            # operators - optional
+            if spec_fields.group(4):
+                operators = spec_fields.group(4).split(',')
+                for op in operators:
+                    if op != '' and op != None:
+                        user_spec['operators'].append(op.lstrip())
             # tags - optional
             if spec_fields.group(5):
                 tags = spec_fields.group(5).split(':')
