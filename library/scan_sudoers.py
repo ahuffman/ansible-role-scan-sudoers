@@ -32,6 +32,10 @@ sudoers:
     sample:
       ansible_facts:
         sudoers:
+          all_parsed_files:
+            - /etc/sudoers.d/group1
+            - /etc/sudoers.d/group2
+            - /etc/sudoers
           sudoers_files:
             - aliases:
                 cmnd_alias:
