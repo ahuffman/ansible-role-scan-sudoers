@@ -9,13 +9,13 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 
 DOCUMENTATION = '''
 ---
-module: scan_sudoers
+module: "scan_sudoers"
 short_description: "Parses the /etc/sudoers and /etc/sudoers.d/* files."
 version_added: "2.7"
 author:
     - "Andrew J. Huffman (@ahuffman)"
 description:
-    - "This module is designed to collect information from C(/etc/sudoers).  The includedir will be dynamically calculated and all included files will be parsed."
+    - "This module is designed to collect information from C(/etc/sudoers).  The #include (files) and #includedir (directories) will be dynamically calculated and all included files will be parsed."
     - "This module is compatible with Linux and Unix systems."
 '''
 
@@ -41,6 +41,7 @@ sudoers:
               configuration:
                 - 'Host_Alias        SOMEHOSTS = server1, server2'
                 - ...
+                - '#includedir /etc/sudoers.d'
               defaults:
                 - '!visiblepw'
                 - env_reset
@@ -325,7 +326,6 @@ def main():
             if not user_alias_re.search(line) and not runas_alias_re.search(line) and not host_alias_re.search(line) and not cmnd_alias_re.search(line) and not include_re.search(line) and not comment_re.search(line) and not defaults_re.search(line) and line != '' and line != None:
                 user_spec = get_user_specs(line, path)
                 user_specifications.append(user_spec)
-            # WIP...
         # Build the sudoer file's dict output
         sudoer_file['path'] = path
         sudoer_file['configuration'] = config_lines
