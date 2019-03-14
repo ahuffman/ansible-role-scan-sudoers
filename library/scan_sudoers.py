@@ -29,7 +29,59 @@ sudoers:
     description: "List of parsed sudoers data and included sudoers data"
     returned: "success"
     type: "list"
-    sample: "[{WIP}]"
+    sample:
+      ansible_facts:
+        sudoers:
+          sudoers_files:
+            - aliases:
+                cmnd_alias:
+                host_alias:
+                runas_alias:
+                user_alias:
+              configuration:
+                - 'Host_Alias        SOMEHOSTS = server1, server2'
+                - ...
+              defaults:
+                - '!visiblepw'
+                - env_reset
+                - secure_path:
+                    - /usr/local/sbin
+                    - /usr/local/bin
+                    - /usr/sbin
+                    - /usr/bin
+                    - /sbin
+                    - /bin
+                - env_keep:
+                    - COLORS
+                    - DISPLAY
+                    - ...
+                - ...
+              include_dir: /etc/sudoers.d
+              included_files:
+                - /etc/sudoers.d/file1
+                - /etc/sudoers.d/file2
+                - /tmp/some/file
+                - ...
+              path: /etc/sudoers
+              user_specifications:
+                - commands:
+                    - ALL
+                  hosts:
+                    - ALL
+                  operators:
+                    - ALL
+                  tags:
+                    - NOPASSWD
+                  users:
+                    - '%wheel'
+                - defaults:
+                    - '!requiretty'
+                  type: user
+                  users:
+                    - STAFF
+                    - INTERNS
+            - aliases:
+                ...
 '''
 
 from ansible.module_utils.basic import AnsibleModule
@@ -219,7 +271,8 @@ def main():
                         env_keep_opts.append(i.replace('"', ''))
                 # build secure path dict and append to defaults list
                 elif defaults_sec_path_re.search(defaults_config_line):
-                    config_defaults.append({defaults_sec_path_re.search(defaults_config_line).group(1): defaults_sec_path_re.search(defaults_config_line).group(5)})
+                    secure_paths = defaults_sec_path_re.search(defaults_config_line).group(5).split(':')
+                    config_defaults.append({'secure_path': secure_paths})
                 # single defaults option case
                 else:
                     config_defaults.append(defaults_config_line)
