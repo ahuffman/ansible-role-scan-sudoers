@@ -42,6 +42,11 @@ EXAMPLES = '''
 - name: "Scan sudoers files - output parsed configurations only"
   scan_sudoers:
     output_raw_configs: False
+
+- name: "Scan sudoers files - output only included files and paths (minimal output)"
+  scan_sudoers:
+    output_raw_configs: False
+    output_parsed_configs: False
 '''
 
 RETURN = '''
