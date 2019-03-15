@@ -256,7 +256,25 @@ def main():
             for command in commands:
                 if command != '' and command != None:
                     user_spec['commands'].append(command.lstrip())
-            #user_spec['name'] = spec_fields.group(1)
+            # Cleanup unused output
+            if user_spec['selinux_role'] == '':
+                user_spec.pop('selinux_role')
+            if user_spec['selinux_type'] == '':
+                user_spec.pop('selinux_type')
+            if user_spec['solaris_privs'] == '':
+                user_spec.pop('solaris_privs')
+            if user_spec['solaris_limitprivs'] == '':
+                user_spec.pop('solaris_limitprivs')
+            if not user_spec['users']:
+                user_spec.pop('users')
+            if not user_spec['hosts']:
+                user_spec.pop('hosts')
+            if not user_spec['operators']:
+                user_spec.pop('operators')
+            if not user_spec['tags']:
+                user_spec.pop('tags')
+            if not user_spec['commands']:
+                user_spec.pop('commands')
         else:
             if default_override_re.search(line):
                 default_override = default_override_re.search(line)
@@ -281,7 +299,7 @@ def main():
                     commands = default_override.group(3).split(',')
                     for command in commands:
                         if command != '' and command != None:
-                            user_spec['commands'].append(command.lstrip())
+                            user_spec['commands'].append(command.lstrip(optionals))
                 elif default_override.group(2) == '>':
                     user_spec['type'] = 'runas'
                     user_spec['operators'] = list()
