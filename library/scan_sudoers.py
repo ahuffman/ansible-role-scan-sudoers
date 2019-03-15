@@ -172,15 +172,19 @@ def main():
 
     def get_user_specs(line, path):
         user_spec = dict()
-        user_spec_re =  re.compile(r'(^\S+,{1}\s*\S+|^\S+)\s*(\S+,{1}\s*|\S+){1}\s*={1}\s*(\({1}(.*)\){1})*\s*(\S+:{1})*\s*(.*$)')
+        user_spec_re =  re.compile(r'(^\S+,{1}\s*\S+|^\S+)\s*(\S+,{1}\s*|\S+){1}\s*={1}\s*(\({1}(.*)\){1})*\s*(ROLE\s*=\s*(\S+)|TYPE\s*=\s*(\S+))*\s*(ROLE\s*=\s*(\S+)|TYPE\s*=\s*(\S+))*\s*(PRIVS\s*=\s*(\S+)|LIMITPRIVS\s*=\s*(\S+))*\s*(PRIVS\s*=\s*(\S+)|LIMITPRIVS\s*=\s*(\S+))*\s*(\S+:{1})*\s*(.*$)')
         default_override_re = re.compile(r'(Defaults){1}([@:!>]){1}((\s*\S+,{1})+\s*\S+|\S+)\s*(.*$)')
         spec_fields = user_spec_re.search(line)
         if user_spec_re.search(line):
+            user_spec['users'] = list()
+            user_spec['hosts'] = list()
+            user_spec['operators'] = list()
+            user_spec['selinux_role'] = ""
+            user_spec['selinux_type'] = ""
+            user_spec['solaris_privs'] = ""
+            user_spec['solaris_limitprivs'] = ""
             user_spec['tags'] = list()
             user_spec['commands'] = list()
-            user_spec['users'] = list()
-            user_spec['operators'] = list()
-            user_spec['hosts'] = list()
             # users
             users = spec_fields.group(1).split(',')
             for user in users:
@@ -197,14 +201,58 @@ def main():
                 for op in operators:
                     if op != '' and op != None:
                         user_spec['operators'].append(op.lstrip())
+            # SELinux - optional
+            if spec_fields.group(5) or spec_fields.group(8):
+              ## TYPE
+                type_re = re.compile(r'(^TYPE){1}\s*={1}\s*')
+                if spec_fields.group(5):
+                    if type_re.search(spec_fields.group(5)):
+                        if type_re.search(spec_fields.group(5)).group(1) == 'TYPE':
+                            user_spec['selinux_type'] = spec_fields.group(7)
+                if spec_fields.group(8):
+                    if type_re.search(spec_fields.group(8)):
+                        if type_re.search(spec_fields.group(8)).group(1) == 'TYPE':
+                            user_spec['selinux_type'] = spec_fields.group(10)
+              ## ROLE
+                role_re = re.compile(r'(^ROLE){1}\s*={1}\s*')
+                if spec_fields.group(5):
+                    if role_re.search(spec_fields.group(5)):
+                        if role_re.search(spec_fields.group(5)).group(1) == 'ROLE':
+                            user_spec['selinux_role'] = spec_fields.group(6)
+                if spec_fields.group(8):
+                    if role_re.search(spec_fields.group(8)):
+                        if role_re.search(spec_fields.group(8)).group(1) == 'ROLE':
+                            user_spec['selinux_role'] = spec_fields.group(9)
+            # Solaris - optional
+            if spec_fields.group(11) or spec_fields.group(14):
+              ## PRIVS
+                privs_re = re.compile(r'(^PRIVS){1}\s*={1}\s*')
+                if spec_fields.group(11):
+                    if privs_re.search(spec_fields.group(11)):
+                        if privs_re.search(spec_fields.group(11)).group(1) == 'PRIVS':
+                            user_spec['solaris_privs'] = spec_fields.group(12)
+                if spec_fields.group(14):
+                    if privs_re.search(spec_fields.group(14)):
+                        if privs_re.search(spec_fields.group(14)).group(1) == 'PRIVS':
+                            user_spec['solaris_privs'] = spec_fields.group(17)
+              ## LIMITPRIVS
+                limitprivs_re = re.compile(r'(^LIMITPRIVS){1}\s*={1}\s*')
+                if spec_fields.group(11):
+                    if limitprivs_re.search(spec_fields.group(11)):
+                        if limitprivs_re.search(spec_fields.group(11)).group(1) == 'LIMITPRIVS':
+                            user_spec['solaris_limitprivs'] = spec_fields.group(13)
+                if spec_fields.group(14):
+                    if limitprivs_re.search(spec_fields.group(14)):
+                        if limitprivs_re.search(spec_fields.group(14)).group(1) == 'LIMITPRIVS':
+                            user_spec['solaris_limitprivs'] = spec_fields.group(16)
             # tags - optional
-            if spec_fields.group(5):
-                tags = spec_fields.group(5).split(':')
+            if spec_fields.group(17):
+                tags = spec_fields.group(17).split(':')
                 for tag in tags:
                     if tag != '' and tag != None:
                         user_spec['tags'].append(tag)
             # commands
-            commands = spec_fields.group(6).split(',')
+            commands = spec_fields.group(18).split(',')
             for command in commands:
                 if command != '' and command != None:
                     user_spec['commands'].append(command.lstrip())
