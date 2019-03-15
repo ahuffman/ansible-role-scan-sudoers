@@ -140,11 +140,11 @@ def main():
     )
     params = module.params
 
-    def get_options(path):
+    def get_includes(path):
         ## Get includes
         sudoers_file = open(path, 'r')
-        options = dict()
-        options['included_files'] = list()
+        includes = dict()
+        includes['included_files'] = list()
         include_dir = ""
 
         # Regex for "#includedir" and "#include" sudoers options
@@ -158,17 +158,18 @@ def main():
                 include_dir = includedir_re.search(line).group(2)
             # Search for '#include'
             if include_re.search(line):
-                options['included_files'].append(include_re.search(line).group(2))
+                includes['included_files'].append(include_re.search(line).group(2))
         sudoers_file.close()
 
         if include_dir:
             # build multi-file output
-            options['include_dir'] = include_dir
+            includes['include_dir'] = include_dir
             # Get list of all included sudoers files
-            options['included_files'] += [join(include_dir, filename) for filename in os.listdir(include_dir) if isfile(join(include_dir, filename))]
-        else:
-            options['include_dir'] = include_dir
-        return options
+            includes['included_files'] += [join(include_dir, filename) for filename in os.listdir(include_dir) if isfile(join(include_dir, filename))]
+        elif not includes['included_files']:
+                includes.pop('included_files')
+            #includes['include_dir'] = include_dir
+        return includes
 
     def get_user_specs(line, path):
         user_spec = dict()
@@ -342,17 +343,17 @@ def main():
         config_defaults = list()
         env_keep_opts = list()
 
-        # Get options from file
-        options = get_options(path)
-        if options['included_files']:
-            sudoer_file['included_files'] = options['included_files']
-        else:
-            sudoer_file['included_files'] = list()
-        if options['include_dir']:
-            sudoer_file['include_dir'] = options['include_dir']
-        else:
-            sudoer_file['include_dir'] = ""
-
+        # Get includes from file
+        includes = get_includes(path)
+        # if we have included files add them to the list
+        try:
+            sudoer_file['included_files'] = includes['included_files']
+        except:
+            pass
+        try:
+            sudoer_file['include_dir'] = includes['include_dir']
+        except:
+            pass
         # Work on each line of sudoers file
         for l in all_lines:
             line = l.replace('\n', '').replace('\t', '    ') #cleaning up chars we don't want
@@ -506,15 +507,28 @@ def main():
 
         if params['output_parsed_configs']:
             # Build defaults env_keep dict and append to the rest of the config_defaults list
-            config_defaults.append({'env_keep': env_keep_opts})
-            sudoer_file['defaults'] = config_defaults
+            if env_keep_opts:
+                config_defaults.append({'env_keep': env_keep_opts})
+            if config_defaults:
+                sudoer_file['defaults'] = config_defaults
             # Build aliases output dictionary
             sudoer_aliases = {'user_alias': user_aliases, 'runas_alias': runas_aliases, 'cmnd_alias': command_aliases, 'host_alias': host_aliases}
-            sudoer_file['aliases'] = sudoer_aliases
+            # cleanup unused outputs
+            if not sudoer_aliases['user_alias']:
+                sudoer_aliases.pop('user_alias')
+            if not sudoer_aliases['runas_alias']:
+                sudoer_aliases.pop('runas_alias')
+            if not sudoer_aliases['cmnd_alias']:
+                sudoer_aliases.pop('cmnd_alias')
+            if not sudoer_aliases['host_alias']:
+                sudoer_aliases.pop('host_alias')
+            if sudoer_aliases:
+                sudoer_file['aliases'] = sudoer_aliases
             sudoer_file['user_specifications'] = user_specifications
 
         # done working on the file
         all_lines.close()
+
         return sudoer_file
 
     def get_sudoers_configs(path):
@@ -535,8 +549,10 @@ def main():
             if included_file:
                 sudoers['sudoers_files'].append(included_file)
             # append even more included files as we parse deeper
-            if included_file['included_files']:
+            try:
                 included_files += included_file['included_files']
+            except:
+                pass
         # return back everything that was included off of the default sudoers file
         included_files.append(default_sudoers)
         sudoers['all_scanned_files'] = included_files
