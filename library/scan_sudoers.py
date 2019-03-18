@@ -530,10 +530,8 @@ def main():
             if sudoer_aliases:
                 sudoer_file['aliases'] = sudoer_aliases
             sudoer_file['user_specifications'] = user_specifications
-
         # done working on the file
         all_lines.close()
-
         return sudoer_file
 
     def get_sudoers_configs(path):
@@ -545,9 +543,10 @@ def main():
         default = get_config_lines(path)
         if default:
             sudoers['sudoers_files'].append(default)
-        if default['included_files']:
-            included_files += default['included_files']
-
+            try:
+                included_files += default['included_files']
+            except:
+                pass
         # Capture each included sudoer file
         for file in included_files:
             included_file = get_config_lines(file)
