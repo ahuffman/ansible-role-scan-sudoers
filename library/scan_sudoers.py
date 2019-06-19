@@ -86,8 +86,9 @@ sudoers:
                     - DISPLAY
                     - ...
                 - ...
-              include_dir: /etc/sudoers.d
-              included_files:
+              include_directories:
+                - /etc/sudoers.d
+              include_files:
                 - /etc/sudoers.d/file1
                 - /etc/sudoers.d/file2
                 - /tmp/some/file
@@ -149,8 +150,9 @@ def main():
         ## Get includes
         sudoers_file = open(path, 'r')
         includes = dict()
-        includes['included_files'] = list()
+        includes['include_files'] = list()
         include_dir = ""
+        includes['include_directories'] = list()
 
         # Regex for "#includedir" and "#include" sudoers options
         includedir_re = re.compile(r'(^#includedir)+\s+(.*$)')
@@ -163,17 +165,20 @@ def main():
                 include_dir = includedir_re.search(line).group(2)
             # Search for '#include'
             if include_re.search(line):
-                includes['included_files'].append(include_re.search(line).group(2))
-        sudoers_file.close()
+                includes['include_files'].append(include_re.search(line).group(2))
 
         if include_dir:
             # build multi-file output
-            includes['include_dir'] = include_dir
+            includes['include_directories'].append(include_dir)
             # Get list of all included sudoers files
-            includes['included_files'] += [join(include_dir, filename) for filename in os.listdir(include_dir) if isfile(join(include_dir, filename))]
-        elif not includes['included_files']:
-                includes.pop('included_files')
-            #includes['include_dir'] = include_dir
+            includes['include_files'] += [join(include_dir, filename) for filename in os.listdir(include_dir) if isfile(join(include_dir, filename))]
+        elif not includes['include_files']:
+            includes.pop('include_files')
+
+        if not includes['include_directories']:
+            includes.pop('include_directories')
+
+        sudoers_file.close()
         return includes
 
     def get_user_specs(line, path):
@@ -352,11 +357,11 @@ def main():
         includes = get_includes(path)
         # if we have included files add them to the list
         try:
-            sudoer_file['included_files'] = includes['included_files']
+            sudoer_file['include_files'] = includes['include_files']
         except:
             pass
         try:
-            sudoer_file['include_dir'] = includes['include_dir']
+            sudoer_file['include_directories'] = includes['include_directories']
         except:
             pass
         # Work on each line of sudoers file
@@ -536,7 +541,7 @@ def main():
 
     def get_sudoers_configs(path):
         sudoers = dict()
-        included_files = list()
+        include_files = list()
 
         # Get parsed values from default sudoers file
         sudoers['sudoers_files'] = list()
@@ -544,22 +549,22 @@ def main():
         if default:
             sudoers['sudoers_files'].append(default)
             try:
-                included_files += default['included_files']
+                include_files += default['include_files']
             except:
                 pass
         # Capture each included sudoer file
-        for file in included_files:
-            included_file = get_config_lines(file)
-            if included_file:
-                sudoers['sudoers_files'].append(included_file)
+        for file in include_files:
+            include_file = get_config_lines(file)
+            if include_file:
+                sudoers['sudoers_files'].append(include_file)
             # append even more included files as we parse deeper
             try:
-                included_files += included_file['included_files']
+                include_files += include_file['include_files']
             except:
                 pass
         # return back everything that was included off of the default sudoers file
-        included_files.append(default_sudoers)
-        sudoers['all_scanned_files'] = included_files
+        include_files.append(default_sudoers)
+        sudoers['all_scanned_files'] = include_files
         return sudoers
 
 
