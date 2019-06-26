@@ -1,0 +1,40 @@
+galaxy_info:
+  role_name: "scan_sudoers"
+  author:
+    - "Andrew J. Huffman"
+  company: "Red Hat"
+  description: "An Ansible Role to parse /etc/sudoers and included files on a Linux/Unix system. This Role contains a custom Ansible module which returns the parsed sudoers data."
+  license: "MIT"
+  min_ansible_version: "2.3"
+  platforms:
+    - name: "EL"
+      versions:
+        - "all"
+    - name: "Fedora"
+      versions:
+        - "all"
+    - name: "opensuse"
+      versions:
+        - "all"
+    - name: "Amazon"
+      versions:
+        - "all"
+    - name: "Ubuntu"
+      versions:
+        - "all"
+    - name: "SLES"
+      versions:
+        - "all"
+    - name: "Debian"
+      versions:
+        - "all"
+
+  galaxy_tags:
+    - "sudo"
+    - "sudoers"
+    - "admin"
+    - "system"
+    - "facts"
+    - "scan"
+
+dependencies: []
