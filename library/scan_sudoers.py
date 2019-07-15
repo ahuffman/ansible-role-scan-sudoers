@@ -121,17 +121,17 @@ from os.path import isfile, join
 import re
 
 def main():
-    module_args = argument_spec=dict(
-            output_raw_configs=dict(
-                type='bool',
-                default=True,
-                required=False
-            ),
-            output_parsed_configs=dict(
-                type='bool',
-                default=True,
-                required=False
-            )
+    module_args = dict(
+        output_raw_configs=dict(
+            type='bool',
+            default=True,
+            required=False
+        ),
+        output_parsed_configs=dict(
+            type='bool',
+            default=True,
+            required=False
+        )
     )
 
     result = dict(
