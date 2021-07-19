@@ -1,3 +1,5 @@
+![Ansible Role](https://img.shields.io/ansible/role/d/41537)
+
 # ahuffman.scan_sudoers
 
 An Ansible Role to parse /etc/sudoers and included files on a Linux/Unix system.  This Role contains a custom Ansible module which returns the parsed sudoers data.
